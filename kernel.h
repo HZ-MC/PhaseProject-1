@@ -8,15 +8,15 @@ struct proc_struct {
    proc_ptr       next_proc_ptr;
    proc_ptr       child_proc_ptr;
    proc_ptr       next_sibling_ptr;
-   char           name[MAXNAME];     /* process's name */
-   char           start_arg[MAXARG]; /* args passed to process */
-   context        state;             /* current context for process */
-   short          pid;               /* process id */
+   char           name[MAXNAME];             /* process's name */
+   char           start_arg[MAXARG];         /* args passed to process */
+   context        state;                     /* current context for process */
+   short          pid;                       /* process id */
    int            priority;
-   int (* start_func) (char *);   /* function where process begins -- launch */
+   int (* start_func) (char *);              /* function where process begins -- launch */
    char          *stack;
    unsigned int   stacksize;
-   int            status;         /* READY, BLOCKED, QUIT, etc. */
+   int            status;                    /* READY, BLOCKED, QUIT, etc. */
    /* other fields as needed... */
 };
 
