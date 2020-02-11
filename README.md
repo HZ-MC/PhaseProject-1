@@ -9,25 +9,25 @@ GitHub Repo for developing and deployment of phase projects for the class CSCV 4
 main        // USLOSS
   |
   V
-startup
+startup     // Javier
   |
   V
-fork1
+fork1       // Javier
   |
   V
-dispatcher
+dispatcher  // Hassan
   |
   V         // functions that may quit or go to start/testcase#
-launch      quit()    join()    zap()
+launch      quit()    join()    zap()                             // Hassan
   |
   V         // testcase test blocks of code for proper behavior. Returning either (-2), (-1), (>=0)
-start 1     testcase#
+start 1     testcase#   // Mark
   |
   V
-sentinel
+sentinel                // Mark    
   |
   V
-deadclock   halt(1)   halt(0)
+deadclock   halt(1)   halt(0)   
   |
   V
 finish
