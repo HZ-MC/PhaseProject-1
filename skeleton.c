@@ -237,22 +237,3 @@ void checkKernelMode(char *name)
              name, Current->pid);
          halt(1);
     }
-}
-Collapse
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Message Javier Felix, Mark Festejo
