@@ -2,6 +2,7 @@ PhaseProject
 ===
 
 Team: Hassan Martinez, Javier Felix, Mark Festejo
+---
 
 * Output  = Has all the testcases into one to test everything on the project.  
 * fork    = Has the fork simulation files with some additional comments by Hassan.  
