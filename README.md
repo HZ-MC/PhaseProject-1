@@ -10,7 +10,15 @@ Team: Hassan Martinez, Javier Felix, Mark Festejo
 * src     = Sources Code that we are working with.  
 * usloss  = Has the usloss for installation.  
 
-GitHub Repo for developing and deployment of phase projects for the class CSCV 452.
+/********************************* To do list *********************************/  
+
+* int block_me(int new_status){}
+* int unblock_proc(int pid){}
+* int read_cur_start_time(void){}
+* void time_slice(void){}
+* int readtime(void){}
+
+/********************************* To do list *********************************/  
 
 /******************************* Flow of control ******************************/  
   
@@ -41,3 +49,5 @@ deadclock   halt(1)   halt(0)
 finish  
 
 /******************************* Flow of control ******************************/  
+
+GitHub Repo for developing and deployment of phase projects for the class CSCV 452.  
