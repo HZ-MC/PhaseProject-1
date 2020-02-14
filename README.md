@@ -1,13 +1,14 @@
-# PhaseProject
+PhaseProject
+===
 
-Team: Hassan Martinez, Javier Felix, Mark Festejo
+#Team: Hassan Martinez, Javier Felix, Mark Festejo
 
-Output  = Has all the testcases into one to test everything on the project.
-fork    = Has the fork simulation files with some additional comments by Hassan.
-obj     = Should have the compile objects to be link by the linker list.
-phase1  = Has the provided_phase1 by the professor to start over again.
-src     = Sources Code that we are working with.
-usloss  = Has the usloss for installation.
+##Output  = Has all the testcases into one to test everything on the project.
+##fork    = Has the fork simulation files with some additional comments by Hassan.
+##obj     = Should have the compile objects to be link by the linker list.
+##phase1  = Has the provided_phase1 by the professor to start over again.
+##src     = Sources Code that we are working with.
+##usloss  = Has the usloss for installation.
 
 GitHub Repo for developing and deployment of phase projects for the class CSCV 452.
 
