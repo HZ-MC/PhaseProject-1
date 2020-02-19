@@ -20,6 +20,9 @@ struct proc_struct {
    /* other fields as needed... */
    proc_ptr       quit_child_ptr;
    int            ppid;                      /* parent process id*/
+   int            sliceTime;
+   int            runTime;
+   int            isZapped;
 };
 
 struct psr_bits {
@@ -39,8 +42,10 @@ union psr_values {
 #define NO_CURRENT_PROCESS NULL
 #define EMPTY -1
 #define READY 0
+#define QUIT 1
 #define JOIN_BLOCK 2
 #define ZAP_BLOCK 3
+#define ZOMBIE 4
 #define MINPRIORITY 5
 #define MAXPRIORITY 1
 #define SENTINELPID 1
