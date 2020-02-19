@@ -15,17 +15,20 @@ Team: Hassan Martinez, Javier Felix, Mark Festejo
 
 /********************************* To do list *********************************/  
 
-* int unblock_proc(int pid){} // WIP almost finished
+
 
 /********************************* Done list *********************************/ 
 
-* int block_me(int new_status){}
+* int blockMe(int new_status){}
 * int readCurrStarTime(void){}
 * void timeSlice(void){}
 * int readTime(void){}
 * int insertReadyList(proc_ptr){}
 * int removeReadyList(proc_ptr){}
 * void clockHandler(){}
+* int unblockProc(int pid){}
+* int getpid(){}
+* int isZapped(){}
 
 /******************************* Flow of control ******************************/  
   
