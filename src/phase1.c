@@ -433,35 +433,6 @@ int isZapped(){
   Parameters - none
   Returns - nothing
   Side Effects - the context of the machine is changed
-
-  Hassan Notes:
-
-  Need to find the zap f(x) to be implemented or call.
-  Need to take care of this thing Hassan.
-
-  Is the scheduled who pick that process to run from the ready quoe. fork1 call dispatcher
-
-  When a particular process is blocked join a child and still all the other child are ative then quit state.
-  Then call dispatcher to handle the ready quee.
-
-  order of f(x) that need to be call: fork1(), join(), zap(), quit()
-  time-sliced is the time to call the dispatcher by the clock.
-
-  PCB = process control block.
-
-  TestCase 00
-  sentinel has a priority of 6.
-  start1 has a priority of 1.
-  dispatcher run next.
-
-  zap(2) is zapping a PID that is 2 at start1.
-  zap(1) is zapper that blocks the zapper.
-
-  zap    Is no block but the zap process is block.
-  block
-
-  No direct kill it needs to be zap first.
-
   ----------------------------------------------------------------------- */
 
 void dispatcher(void)
