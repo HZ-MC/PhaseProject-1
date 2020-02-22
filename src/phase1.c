@@ -77,6 +77,10 @@ int procCount;
    ----------------------------------------------------------------------- */
 
 void startup() {
+   
+   // Check if in kernel mode, halt if in user mode.
+   checkKernelMode("startup()");
+   
    int i;      /* loop index */
    int result; /* value returned by call to fork1() */
    /* initialize the process table */
@@ -261,7 +265,15 @@ void startup() {
 
     /* for future phase(s) */
     p1_fork(ProcTable[proc_slot].pid);
+    
+     // let dispatcher decide which process runs next
+    if (start_func != sentinel) { // don't dispatch sentinel!
+        dispatcher(); 
+    }
 
+    // This will enable interrupts for the parent process
+    enableInterrupts();
+    
  } /* fork1 */
 
 /* ------------------------------------------------------------------------
