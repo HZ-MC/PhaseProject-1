@@ -15,13 +15,6 @@ Team: Hassan Martinez, Javier Felix, Mark Festejo
 
 /********************************* To do list *********************************/  
 
-* Check what type of zapper to go with = "is_zapped" OR "isZapped"?
-* Check if insertReadyList() is the same as the inserRL()? And if so what readylist to go with?
-* Discuss about kernel.h values and variables.
-* Check if getpid() can be replace with library call of unistd.h?
-
-* Minor check to double declaration of zap  int zap(int pid); int zap(int);.
-
 /********************************* Done list *********************************/ 
 
 * int blockMe(int new_status){}
