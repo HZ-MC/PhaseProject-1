@@ -167,7 +167,7 @@ int fork1(char *name, int (*f)(void *), void *arg, int stacksize, int priority)
 
      /* test if in kernel mode; halt if in user mode */
 
-      checkkernelmode("fork1()");
+      checkKernelMode("fork1()");
       disableInterrupts();
 
      /* Return if stack size is too small */
@@ -235,9 +235,6 @@ int fork1(char *name, int (*f)(void *), void *arg, int stacksize, int priority)
 
       //Setting the process priority.
       ProcTable[proc_slot].priority = priority;
-
-      //Increment number of processes.
-      int numOfProcess += 1;
 
      /* Initialize context for this process, but use launch function pointer for
       * the initial value of the process's program counter (PC)
@@ -564,7 +561,7 @@ void enableInterrupts() {
 
 //Function to check in kernel mode.
 void checkKernelMode(char *name) {
-    if ((PSR_CURRENT_MODE & psrGet()) == 0) {
+    if ((PSR_CURRENT_MODE & psr_get()) == 0) {
         console("%s: called while in user mode, by process %d. Halting...\n", name, Current->pid);
         halt(1);
         return 0;
@@ -718,14 +715,14 @@ void removeReadyList(proc_ptr toRemove) {
     if (ReadyList == toRemove) {
         ReadyList = toRemove->next_proc_ptr;
         if (DEBUG && debugflag) {
-            console("removeReadyList(): %s removed from ReadyList.\n", toRemove->name;)
+            console("removeReadyList(): %s removed from ReadyList.\n", toRemove->name);
         }
     }
     for (curr = ReadyList; curr != NULL; curr->next_proc_ptr) {
         if (curr->pid == toRemove->pid) {
             prev->next_proc_ptr = toRemove->next_proc_ptr;
             if (DEBUG && debugflag) {
-                console("removeReadyList(): %s removed from ReadyList.\n", toRemove->name;)
+                console("removeReadyList(): %s removed from ReadyList.\n", toRemove->name);
             }
             break;
         }
