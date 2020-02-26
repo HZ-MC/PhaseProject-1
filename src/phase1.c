@@ -74,20 +74,21 @@ void startup() {
    if (DEBUG && debugflag) {
        console("startup(): initializing process table, ProcTable[]\n");
    }
-   for (i = 0; i < MAXPROC; i++) {
-       ProcTable[i].next_proc_ptr = NO_CURRENT_PROCESS;
-       ProcTable[i].child_proc_ptr = NO_CURRENT_PROCESS;
-       ProcTable[i].next_sibling_ptr = NO_CURRENT_PROCESS;
-       ProcTable[i].quit_child_ptr = NO_CURRENT_PROCESS;
+   
+    for (i = 0; i < MAXPROC; i++) {
+       ProcTable[i].next_proc_ptr = NULL;
+       ProcTable[i].child_proc_ptr = NULL;
+       ProcTable[i].next_sibling_ptr = NULL;
+       ProcTable[i].quit_child_ptr = NULL;
        ProcTable[i].name[0] = '\0';
        ProcTable[i].start_arg[0] = '\0';
-       ProcTable[i].pid = EMPTY;
-       ProcTable[i].ppid = EMPTY;
-       ProcTable[i].priority = EMPTY;
+       ProcTable[i].pid = -1;
+       ProcTable[i].ppid = -1;
+       ProcTable[i].priority = -1;
        ProcTable[i].status = EMPTY;
-       ProcTable[i].start_func = NO_CURRENT_PROCESS;
-       ProcTable[i].stack = NO_CURRENT_PROCESS;
-       ProcTable[i].stacksize = EMPTY;
+       ProcTable[i].start_func = NULL;
+       ProcTable[i].stack = NULL;
+       ProcTable[i].stacksize = -1;
    }
 
    /* Initialize the Ready list, etc. */
@@ -267,6 +268,9 @@ int fork1(char *name, int (*start_func)(char *), char *arg, int stacksize, int p
 
 void launch()
 {
+    checkKernelMode("launch()");
+    disableInterrupts();
+    
     // Variable to pass start_arg at quit().
     int result;
     // if debugflag is et to 0 then print where launch starts.
@@ -296,6 +300,9 @@ void launch()
 int join(int *code)
 {
 
+    checkKernelMode("join()");
+    disableInterrupts();
+    
  // If the process is zapped then return -1.
  if(Current->is_zapped == ZAPPED){return -1;}
  // If the process does not have any children return -2.
@@ -348,6 +355,9 @@ int is_zapped(void)
  // This f(x) is used to print the error under the quit() where it takes walker out with halt(1).
  void quitout(proc_ptr walker)
  {
+     checkKernelMode("quit()");
+     disableInterrupts();
+     
    // Display the status of the child under the error.
    console("Error! Active child status = %d\n", walker->status);
    console("Error! Process has active children and cannot quit.\n");
@@ -363,7 +373,7 @@ int is_zapped(void)
    {
      proc_ptr walker = Current->child_proc_ptr;
      // If walker status is not at QUIT state then show error/halt(1).
-     if(walker->status != QUIT){void quitout(walker);}
+     if(walker->status != QUIT){quitout(walker);}
      else
      {
        // While there are other childrens run.
@@ -372,7 +382,7 @@ int is_zapped(void)
          // Pointing to next child in the node.
          walker = walker->next_sibling_ptr;
          // If walker status is not at QUIT state then show error/halt(1).
-         if(walker->status != QUIT){void quitout(walker);}
+         if(walker->status != QUIT){quitout(walker);}
        }
      }
    }
@@ -418,6 +428,9 @@ int is_zapped(void)
 
 void dispatcher(void)
 {
+    
+    checkKernelMode("dispatcher()");
+    disableInterrupts();
 
     // Check the priority of the Current process if it is lower that the ReadyList return.
     if(Current != NULL && Current->priority <= ReadyList->priority && Current->status == RUNNING){return;}
@@ -449,7 +462,7 @@ void dispatcher(void)
       removeReadyList(next_process->pid);
       // Display to the console about the context_switch names of old & new processes.
       console("dispatcher(): context_switch from %s to %s\n", old_process->name, next_process->name);
-      printReadyList();
+      //printReadyList();
       console("\n");
       // Switching the context of the state of old and next processes.
       context_switch(&old_process->state, &next_process->state);
@@ -469,7 +482,7 @@ void dispatcher(void)
         // Add it to the ReadyList.
         insertReadyList(old_process);
         // Display to the console.
-        printReadyList();
+        //printReadyList();
         console("\n");
       }
       // Display to the console about the context_switch names of old & new processes.
@@ -493,7 +506,10 @@ void dispatcher(void)
    ----------------------------------------------------------------------- */
 
 int sentinel(void *dummy) {
-   if (DEBUG && debugflag) {
+  
+    checkKernelMode("sentinel()");
+    
+    if (DEBUG && debugflag) {
        console("sentinel(): called\n");
    }
    while (1) {
@@ -564,7 +580,7 @@ void checkKernelMode(char *name) {
     if ((PSR_CURRENT_MODE & psr_get()) == 0) {
         console("%s: called while in user mode, by process %d. Halting...\n", name, Current->pid);
         halt(1);
-    } 
+    }
 } /* checkKernelMode */
 
 /* ------------------------------------------------------------------------
@@ -640,6 +656,8 @@ int unblockProc(int pid) {
         Side Effects -  none
 ----------------------------------------------------------------------- */
 int readCurrStartTime(void) {
+   
+    checkKernelMode("readCurrStartTime()");
     return Current->sliceTime;
 } // readCurrStartTime()
 
@@ -651,6 +669,9 @@ int readCurrStartTime(void) {
         Side Effects -  none
 ----------------------------------------------------------------------- */
 void timeSlice(void) {
+    
+    checkKernelMode("timeSlice()");
+    
     int time;
     time = readTime();
     if (time >= TIMESLICE) {
