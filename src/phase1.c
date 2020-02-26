@@ -157,7 +157,7 @@ void finish()
                   process information changed
    ------------------------------------------------------------------------ */
 
-int fork1(char *name, int (*f)(void *), void *arg, int stacksize, int priority)
+int fork1(char *name, int (*start_func)(char *), char *arg, int stacksize, int priority)
 {
 
      int proc_slot = -1;
@@ -564,10 +564,7 @@ void checkKernelMode(char *name) {
     if ((PSR_CURRENT_MODE & psr_get()) == 0) {
         console("%s: called while in user mode, by process %d. Halting...\n", name, Current->pid);
         halt(1);
-        return 0;
-    } else {
-        return 1;
-    }
+    } 
 } /* checkKernelMode */
 
 /* ------------------------------------------------------------------------
