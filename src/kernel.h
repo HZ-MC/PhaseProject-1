@@ -21,6 +21,7 @@ struct proc_struct
    /* other fields as needed... */
    proc_ptr       quit_child_ptr;
    proc_ptr       parent_ptr;
+   proc_ptr       walker;
    int            exit_code;                  // Variable for the exit code of the process that call quit().
    int            is_zapped;                  // Variable for the zapped or not zapped.
    int            sliceTime;
