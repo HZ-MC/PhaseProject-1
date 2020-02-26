@@ -20,6 +20,7 @@ struct proc_struct
    int            status;                     /* READY, BLOCKED, QUIT, etc. */
    /* other fields as needed... */
    proc_ptr       quit_child_ptr;
+   proc_ptr       parent_ptr;
    int            exit_code;                  // Variable for the exit code of the process that call quit().
    int            is_zapped;                  // Variable for the zapped or not zapped.
    int            sliceTime;
@@ -51,7 +52,7 @@ union psr_values
 #define MINPRIORITY 5
 #define MAXPRIORITY 1
 #define SENTINELPID 1
-#define SENTINELPRIORITY LOWEST_PRIORITY
+#define SENTINELPRIORITY 6
 #define TIMESLICE 80000
 #define RUNNING 0
 #define ZAPPED 1
