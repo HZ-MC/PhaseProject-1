@@ -24,6 +24,8 @@ static void enableInterrupts();
 void disableInterrupts();
 void checkKernelMode(char *name);
 static void check_deadlock();
+void quitout(proc_ptr walker);
+void quit(int code);
 int zap(int);
 int is_zapped(void);
 int readCurrStartTime(void);
