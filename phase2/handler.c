@@ -72,9 +72,8 @@ void disk_handler(int dev, void *unit)
     }
 
     // getting device status
-    long unit = (long) unit;
     int status;
-    int valid = device_input(dev, unit, &status);
+    int valid = device_input(dev, (long) unit, &status);
 
     //checks if valid unit number, returns otherwise
     if (valid != DEV_OK) {
@@ -83,7 +82,7 @@ void disk_handler(int dev, void *unit)
         return;
     }
     // conditionally send the contents of status register to appropriate IO_mailbox
-    MboxCondSend(IO_mailboxes[DISKBOX + unit], &status, sizeof(int));
+    MboxCondSend(IO_mailboxes[DISKBOX + (long) unit], &status, sizeof(int));
 
     enableInterrupts(); // enable interrupts
 
@@ -107,9 +106,8 @@ void term_handler(int dev, void *unit)
     }
 
     // getting device status
-    long unit = (long) unit;
     int status;
-    int valid = device_input(dev, unit, &status);
+    int valid = device_input(dev, (long) unit, &status);
 
     // checks if valid unit number, returns otherwise
     if (valid != DEV_OK) {
@@ -118,7 +116,7 @@ void term_handler(int dev, void *unit)
         return;
     }
     // conditionally send the contents of status register to appropriate IO_mailbox
-    MboxCondSend(IO_mailboxes[TERMBOX + unit], &status, sizeof(int));
+    MboxCondSend(IO_mailboxes[TERMBOX + (long) unit], &status, sizeof(int));
 
     enableInterrupts(); // re-enable interrupts
 } /* term_handler */
@@ -179,7 +177,7 @@ int waitdevice(int type, int unit, int *status)
     IO_blocked--;
 
     enableInterrupts(); // re-enable interrupts
-    if (isZapped()){
+    if (is_zapped()){
         return -1;
     } else {
         return 0;

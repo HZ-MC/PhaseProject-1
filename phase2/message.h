@@ -1,6 +1,8 @@
+#ifndef _MESSAGE_H
+#define _MESSAGE H
 #define DEBUG2 1
 
-typedef struct mailbox mail_box;
+typedef struct mailbox mailbox;
 typedef struct mail_slot *slot_ptr;
 typedef struct mail_slot mail_slot;
 typedef struct mbox_proc *mbox_proc_ptr;
@@ -44,9 +46,9 @@ struct mbox_proc {
     int             message_size;
 };
 
-// mbox_proc status constants,unsure of values
-#define FULL_MBOX
-#define NO_MESSAGES
+// mbox_proc status constants
+#define FULLMBOX 11
+#define NOMESSAGES 12
 
 struct queue {
     void        *head;
@@ -71,3 +73,5 @@ union psr_values {
    struct psr_bits bits;
    unsigned int integer_part;
 };
+
+#endif /* MESSAGE_H */
