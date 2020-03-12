@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <phase1.h>
 #include <phase2.h>
-#include "message.h"
 
 extern int debugflag2;
 extern void disableInterrupts(void);
