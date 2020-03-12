@@ -9,6 +9,27 @@ typedef struct mbox_proc *mbox_proc_ptr;
 typedef struct mbox_proc mbox_proc;
 typedef struct queue queue;
 
+
+struct mbox_proc {
+    mbox_proc_ptr   next_mbox_proc;
+    slot_ptr        message_received; // mail_slot which will contain the message received
+    int             pid;    // process id
+    void            *message_ptr;   // pointer for where the received message to point
+    int             message_size;
+};
+
+
+struct queue {
+    void       *head;
+    void       *tail;
+    int         size;
+    int         type;   // type of pointer to use
+};
+
+// queue status constants
+#define QUEUE_SLOT 0
+#define QUEUE_PROC 1
+
 struct mailbox {
    int           mbox_id;
    /* other items as needed... */
@@ -38,28 +59,9 @@ struct mail_slot {
 #define EMPTY 0
 #define IN_USE 1
 
-struct mbox_proc {
-    mbox_proc_ptr   next_mbox_proc;
-    slot_ptr        message_received; // mail_slot which will contain the message received
-    int             pid;    // process id
-    void            *message_ptr;   // pointer for where the received message to point
-    int             message_size;
-};
-
-// mbox_proc status constants
+// proc status constants
 #define FULLMBOX 11
 #define NOMESSAGES 12
-
-struct queue {
-    void        *head;
-    void        *tail;
-    int         size;
-    int         type;   // type of pointer to use
-};
-
-// queue status constants
-#define QUEUE_SLOT 0
-#define QUEUE_PROC 1
 
 struct psr_bits {
     unsigned int cur_mode:1;

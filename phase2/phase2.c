@@ -284,7 +284,7 @@ int MboxSend(int mbox_id, void *msg_ptr, int msg_size)
     }
 
     // handle blocked receive
-    if (mbox->blocked_proc_receive.size > 0 && (mbox->queue_slots < mbox->total_slots || mbox->total_slots == 0)) {
+    if (mbox->blocked_proc_receive.size > 0 && (mbox->queue_slots.size < mbox->total_slots || mbox->total_slots == 0)) {
         mbox_proc_ptr proc = (mbox_proc_ptr)dequeue(&mbox->blocked_proc_receive);
         // message to receiver
         int result = msgToProc(proc, msg_ptr, msg_size);
@@ -493,7 +493,7 @@ int MboxReceive(int mbox_id, void *msg_ptr, int msg_size)
         mproc.message_received = NULL;
 
         // handling zero slot mailbox,
-        if(mbox->blocked_proc_send > 0 && mbox->total_slots == 0)   {
+        if(mbox->total_slots == 0 && mbox->blocked_proc_send.size > 0)   {
             mbox_proc_ptr proc = (mbox_proc_ptr)dequeue(&mbox->blocked_proc_send);
             msgToProc(&mproc, proc->message_ptr, proc->message_size);
             if (DEBUG2 && debugflag2) {
@@ -595,7 +595,7 @@ int MboxCondSend(int mbox_id, void *msg_ptr, int msg_size)
     }
 
     // handle blocked receive
-    if (mbox->blocked_proc_receive.size > 0 && (mbox->queue_slots < mbox->total_slots || mbox->total_slots == 0)) {
+    if (mbox->blocked_proc_receive.size > 0 && (mbox->queue_slots.size < mbox->total_slots || mbox->total_slots == 0)) {
         mbox_proc_ptr proc = (mbox_proc_ptr)dequeue(&mbox->blocked_proc_receive);
         // message to receiver
         int result = msgToProc(proc, msg_ptr, msg_size);
@@ -699,7 +699,7 @@ int MboxCondReceive(int mbox_id, void *msg_ptr, int msg_size)
         mproc.message_received = NULL;
 
         // handling zero slot mailbox, if process has been blocked on send, unblock and get the message
-        if(mbox->blocked_proc_send > 0 && mbox->total_slots == 0)   {
+        if(mbox->total_slots == 0 && mbox->blocked_proc_send.size > 0)   {
             mbox_proc_ptr proc = (mbox_proc_ptr)dequeue(&mbox->blocked_proc_send);
             msgToProc(&mproc, proc->message_ptr, proc->message_size);
             if (DEBUG2 && debugflag2) {
