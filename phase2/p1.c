@@ -6,7 +6,7 @@ void
 p1_fork(int pid)
 {
     if (DEBUG && debugflag) {
-        console("p1_fork(): called, pid: %d\n", pid)
+        console("p1_fork(): called, pid: %d\n", pid);
     }
 } /* p1_fork */
 

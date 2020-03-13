@@ -5,7 +5,8 @@
 extern int debugflag2;
 extern void disableInterrupts(void);
 extern void enableInterrupts(void);
-extern void requireKernelMode(char *);
+extern void checkKernelMode(char *);
+
 
 int IO_mailboxes[7]; //mailboxes for clock(1), disks(2), and terminals(4)
 int IO_blocked = 0; // number of blocked processes on IO_mailboxes
@@ -27,7 +28,7 @@ void clock_handler(int dev, void *unit)
 {
     // disable interrupts and check if in kernel mode
     disableInterrupts();
-    requireKernelMode("clock_handler()");
+    checkKernelMode("clock_handler()");
 
    if (DEBUG2 && debugflag2)
       console("clock_handler(): handler called\n");
@@ -58,7 +59,7 @@ void disk_handler(int dev, void *unit)
 {
     // disable interrupts and check if in kernel mode
     disableInterrupts();
-    requireKernelMode("disk_handler()");
+    checkKernelMode("disk_handler()");
 
    if (DEBUG2 && debugflag2)
       console("disk_handler(): handler called\n");
@@ -92,7 +93,7 @@ void term_handler(int dev, void *unit)
 {
     // disable interrupts and check if in kernel mode
     disableInterrupts();
-    requireKernelMode("term_handler()");
+    checkKernelMode("term_handler()");
 
    if (DEBUG2 && debugflag2)
       console("term_handler(): handler called\n");
@@ -125,7 +126,7 @@ void syscall_handler(int dev, void *unit)
 {
     // disable interrupts and check if in kernel mode
     disableInterrupts();
-    requireKernelMode("syscall_handler()");
+    checkKernelMode("syscall_handler()");
 
    if (DEBUG2 && debugflag2)
       console("syscall_handler(): handler called\n");
@@ -145,7 +146,7 @@ void syscall_handler(int dev, void *unit)
        halt(1);
    }
 
-   sys_vec[sys_ptr->number](sys_ptr); // calling appropriate system call handler
+   sys_vec[sys_ptr->number](sys_ptr); // calling appropriate system call handlerNUL
    enableInterrupts(); // re-enable interrupts
 
 } /* syscall_handler */
@@ -154,7 +155,7 @@ int waitdevice(int type, int unit, int *status)
 {
     // disable interrupts and check if in kernel mode
     disableInterrupts();
-    requireKernelMode("syscall_handler()");
+    checkKernelMode("syscall_handler()");
     int result = 0;
     switch(type)
     {

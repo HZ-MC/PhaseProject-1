@@ -52,7 +52,8 @@ int next_mbox_id = 0;
 int next_slot_id = 0;
 int next_proc = 0;
 
-
+// system vector
+void (*sys_vec[MAXSYSCALLS])(sysargs *args);
 /* -------------------------- Functions ----------------------------------- */
 
 /* ------------------------------------------------------------------------
