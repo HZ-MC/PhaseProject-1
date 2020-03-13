@@ -10,7 +10,7 @@
 
 
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include <usloss.h>
 #include <phase1.h>
 #include <phase2.h>

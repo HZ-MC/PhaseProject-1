@@ -2,7 +2,7 @@
 #include <usloss.h>
 #include <phase1.h>
 #include <phase2.h>
-#include <strings.h>
+#include <string.h>
 
 int XXp1(char *);
 int XXp2(char *);

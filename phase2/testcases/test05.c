@@ -7,7 +7,7 @@
 #include <usloss.h>
 #include <phase1.h>
 #include <phase2.h>
-#include <strings.h>  /* so we can use strlen() */
+#include <string.h>  /* so we can use strlen() */
 
 int XXp1(char *);
 int XXp2(char *);
