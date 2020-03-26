@@ -21,10 +21,6 @@ int MboxCreate(int, int);
 int MboxRelease(int);
 int msgToProc(mbox_proc_ptr, void*, int);
 int createSlot(void*, int);
-int MboxSend(int, void*, int);
-int MboxReceive(int, void*, int);
-int MboxCondSend(int, void*, int);
-int MboxCondReceive(int, void*, int);
 void disableInterrupts(void);
 void enableInterrupts(void);
 void checkKernelMode(char*);
@@ -39,6 +35,8 @@ void *peek(queue*);
 /* -------------------------- Globals ------------------------------------- */
 
 int debugflag2 = 0;
+
+
 
 mailbox MailBoxTable[MAXMBOX];  // mail boxes
 mail_slot MailSlotTable[MAXSLOTS]; // mail slots
@@ -90,7 +88,8 @@ int start1(char *arg)
    }
 
    // setting mail boxes/slots in use to 0
-   num_boxes = num_slots = 0;
+   num_boxes = 0;
+   num_slots = 0;
 
    // init IO_mailboxes for interrupt handlers
    IO_mailboxes[CLOCKBOX] = MboxCreate(0, sizeof(int)); // 1 clock
@@ -158,8 +157,10 @@ int MboxCreate(int slots, int slot_size)
         }
     }
 
+    // get the mailbox
     mailbox *mbox = &MailBoxTable[next_mbox_id];
 
+    // initialize fields
     mbox->mbox_id = next_mbox_id++;
     mbox->total_slots = slots;
     mbox->slot_size = slot_size;
@@ -168,7 +169,7 @@ int MboxCreate(int slots, int slot_size)
     initQueue(&mbox->blocked_proc_send,QUEUE_PROC);
     initQueue(&mbox->blocked_proc_receive, QUEUE_PROC);
 
-    num_boxes++;
+    num_boxes++; // increase mailbox count
 
     if (DEBUG2 && debugflag2) {
         console("MboxCreate(): created mailbox. id: %d, total_slots: %d, slot_size: %d, num_boxes: %d\n",
@@ -294,7 +295,10 @@ int MboxSend(int mbox_id, void *msg_ptr, int msg_size)
         }
         unblock_proc(proc->pid);
         enableInterrupts(); // re-enable interrupts
-        return result;
+        if (result < 0) {
+            return -1;
+        }
+        return 0;
     }
 
     // if all slots taken, block caller until slots become available
@@ -436,7 +440,7 @@ int MboxReceive(int mbox_id, void *msg_ptr, int msg_size)
     mailbox *mbox = &MailBoxTable[mbox_id];
     int size;
 
-    // check status of mailbox to check validity
+    // check status of mailbox for validity
     if (mbox->status == INACTIVE) {
         if (DEBUG2 && debugflag2) {
             console("MboxReceive(): called with invalid mailbox id: %d Returning -1\n", mbox_id);
@@ -484,7 +488,6 @@ int MboxReceive(int mbox_id, void *msg_ptr, int msg_size)
 
     // block if no messages available
     if (mbox->slot_size == 0)   {
-
         // init proc
         mbox_proc mproc;
         mproc.next_mbox_proc = NULL;
