@@ -1,76 +1,75 @@
-/* ------------------------------------------------------------------------
-   phase3.c
-
-   University of Arizona South
-   Computer Science 452
-   @authors: Javier Felix, Mark Festejo, Hassan Martinez
-   ------------------------------------------------------------------------ */
+/* Programmers: Javier Felix, Mark Festejo, Hassan Martinez
+ * Project Name: Phase 3
+ * Date: 04/16/2020
+ */
 
 #include <usloss.h>
 #include <phase1.h>
 #include <phase2.h>
 #include <phase3.h>
+#include <usyscall.h>
 #include <libuser.h>
 #include <sems.h>
-#include <usyscall.h>
 #include <string.h>
 
-/*-------------------- Prototypes ------------------------*/
-extern int start3();
-
+/* ------------------------- Prototypes ----------------------------------- */
 void check_kernel_mode(char *);
 void nullsys3(sysargs *);
 void spawn(sysargs *);
 void wait(sysargs *);
 void terminate(sysargs *);
-void sem_create(sysargs *);
-int sem_create_real(int);
-void semp(sysargs *);
-void semp_real(int);
-void semv(sysargs *);
-void semv_real(int);
-void sem_free(sysargs *);
-int sem_free_real(int);
-void gettimeofday(sysargs *);
-void cputime(sysargs *);
+void semCreate(sysargs *);
+int semCreateReal(int);
+void semP(sysargs *);
+void semPReal(int);
+void semV(sysargs *);
+void semVReal(int);
+void semFree(sysargs *);
+int semFreeReal(int);
+void getTimeOfDay(sysargs *);
+void cpuTime(sysargs *);
 void getPID(sysargs *);
+int spawnReal(char *, int(*)(char *), char *, int, int);
+int spawnLaunch(char *);
+int waitReal(int *);
+void terminateReal(int);
+void emptyProc3(int);
+void initProc(int);
+void setUserMode();
+void initProcQueue3(procQueue*, int);
+void enq3(procQueue*, procPtr3);
+procPtr3 deq3(procQueue*);
+procPtr3 peek3(procQueue*);
+void removeChild3(procQueue*, procPtr3);
+extern int start3();
 
-int spawn_real(char*, int(*)(char *), char *, int ,int);
-int spawn_launch(char *);
-int wait_real(int *);
-void terminate_real(int);
-void empty_proc3(int);
-void init_proc3(int);
-void init_user_mode();
-void init_proc_queue3(proc_queue *, int);
-void enqueue3(proc_queue *, proc_ptr3);
-proc_ptr3 dequeue3(proc_queue *);
-proc_ptr3 peek3(proc_queue *);
-void remove_child3(proc_queue *, proc_ptr3);
-void enqueue_blocked_proc(proc_ptr3 *, proc_ptr3);
-proc_ptr3 dequeue_blocked_proc(proc_ptr3);
+void enqBlockedProc(procPtr3*, procPtr3);
+procPtr3 deqBlockedProc(procPtr3*);
 
-/*--------------------- Globals --------------------------*/
-int debugflag3 = 0;
+
+/* -------------------------- Globals ------------------------------------- */
+int debug3 = 0;
+
+// int sems[MAXSEMS];
 semaphore SemTable[MAXSEMS];
-int num_sems;
-proc_struct3 ProcTable3[MAXPROC];
+int numSems;
+procStruct3 ProcTable3[MAXPROC];
 
-
-int start2(char *arg)
+int
+start2(char *arg)
 {
-    int		pid;
-    int		status;
+    int pid;
+    int status;
     /*
      * Check kernel mode here.
      */
-    check_kernel_mode("start2()");
+    check_kernel_mode("start2");
 
     /*
      * Data structure initialization as needed...
      */
 
-    // initializing every system call handler as nullsys3
+    // populate system call vec
     int i;
     for (i = 0; i < MAXSYSCALLS; i++) {
         sys_vec[i] = nullsys3;
@@ -78,28 +77,29 @@ int start2(char *arg)
     sys_vec[SYS_SPAWN] = spawn;
     sys_vec[SYS_WAIT] = wait;
     sys_vec[SYS_TERMINATE] = terminate;
-    sys_vec[SYS_SEMCREATE] = sem_create;
-    sys_vec[SYS_SEMP] = semp;
-    sys_vec[SYS_SEMV] = semv;
-    sys_vec[SYS_SEMFREE] = sem_free;
-    sys_vec[SYS_GETTIMEOFDAY] = gettimeofday;
-    sys_vec[SYS_CPUTIME] = cputime;
+    sys_vec[SYS_SEMCREATE] = semCreate;
+    sys_vec[SYS_SEMP] = semP;
+    sys_vec[SYS_SEMV] = semV;
+    sys_vec[SYS_SEMFREE] = semFree;
+    sys_vec[SYS_GETTIMEOFDAY] = getTimeOfDay;
+    sys_vec[SYS_CPUTIME] = cpuTime;
     sys_vec[SYS_GETPID] = getPID;
 
-    // initialize proc table
-    for (i = 0; i < MAXSEMS; i++) {
-        empty_proc3(i);
+    // populate proc table
+    for (i = 0; i < MAXPROC; i++) {
+        emptyProc3(i);
     }
 
-    // initialize semaphore table
+    // populate semaphore table
     for (i = 0; i < MAXSEMS; i++) {
         SemTable[i].id = -1;
         SemTable[i].value = -1;
-        SemTable[i].starting_value = -1;
-        SemTable[i].priv_mbox_id = -1;
-        SemTable[i].mutex_mbox_id = -1;
+        SemTable[i].startingValue = -1;
+        SemTable[i].priv_mBoxID = -1;
+        SemTable[i].mutex_mBoxID = -1;
     }
-    num_sems = 0;
+
+    numSems = 0;
 
     /*
      * Create first user-level process and wait for it to finish.
@@ -108,539 +108,597 @@ int start2(char *arg)
      * Assumes kernel-mode versions of the system calls
      * with lower-case names.  I.e., Spawn is the user-mode function
      * called by the test cases; spawn is the kernel-mode function that
-     * is called by the syscall_handler; spawn_real is the function that
+     * is called by the syscallHandler; spawnReal is the function that
      * contains the implementation and is called by spawn.
      *
-     * Spawn() is in libuser.c.  It invokes usyscall()
+     * Spawn() is in libuser.c.  It invokes USLOSS_Syscall()
      * The system call handler calls a function named spawn() -- note lower
      * case -- that extracts the arguments from the sysargs pointer, and
-     * checks them for possible errors.  This function then calls spawn_real().
+     * checks them for possible errors.  This function then calls spawnReal().
      *
-     * Here, we only call spawn_real(), since we are already in kernel mode.
+     * Here, we only call spawnReal(), since we are already in kernel mode.
      *
-     * spawn_real() will create the process by using a call to fork1 to
-     * create a process executing the code in spawn_launch().  spawn_real()
-     * and spawn_launch() then coordinate the completion of the phase 3
-     * process table entries needed for the new process.  spawn_real() will
-     * return to the original caller of Spawn, while spawn_launch() will
-     * begin executing the function passed to Spawn. spawn_launch() will
+     * spawnReal() will create the process by using a call to fork1 to
+     * create a process executing the code in spawnLaunch().  spawnReal()
+     * and spawnLaunch() then coordinate the completion of the phase 3
+     * process table entries needed for the new process.  spawnReal() will
+     * return to the original caller of Spawn, while spawnLaunch() will
+     * begin executing the function passed to Spawn. spawnLaunch() will
      * need to switch to user-mode before allowing user code to execute.
-     * spawn_real() will return to spawn(), which will put the return
+     * spawnReal() will return to spawn(), which will put the return
      * values back into the sysargs pointer, switch to user-mode, and
      * return to the user code that called Spawn.
      */
-    if (debugflag3) {
+    if (debug3)
         console("Spawning start3...\n");
-    }
-    pid = spawn_real("start3", start3, NULL, 4*USLOSS_MIN_STACK, 3);
-    pid = wait_real(&status);
-    if (debugflag3) {
+    pid = spawnReal("start3", start3, NULL, USLOSS_MIN_STACK, 3);
+
+    /* Call the waitReal version of your wait code here.
+     * You call waitReal (rather than Wait) because start2 is running
+     * in kernel (not user) mode.
+     */
+    pid = waitReal(&status);
+
+    if (debug3)
         console("Quitting start2...\n");
-    }
+
     quit(pid);
     return -1;
-
 } /* start2 */
 
 
-/*
- *
- *
- */
-void spawn(sysargs *args_ptr) {
-    check_kernel_mode("spawn()");
+// Spawn function that checks for correctness.
+void spawn(sysargs *args)
+{
+    check_kernel_mode("spawn");
 
-    int (*func)(char *);
-    char *arg = args_ptr->arg2;
-    int stack_size = (int)(args_ptr->arg3);
-    int priority = (int)(args_ptr->arg4);
-    char *name = (char *) (args_ptr->arg5);
+    int (*func)(char *) = args->arg1;
+    char *arg = args->arg2;
+    int stack_size = (int) ((long)args->arg3);
+    int priority = (int) ((long)args->arg4);
+    char *name = (char *)(args->arg5);
 
-    if (debugflag3) {
-        console("spawn(): args are: name: %s, stack size: %d, priority: %d\n", name, stack_size, priority);
-    }
+    if (debug3)
+        console("spawn(): args are: name = %s, stack size = %d, priority = %d\n", name, stack_size, priority);
 
-    int pid = spawn_real(name, func, arg, stack_size, priority);
+    int pid = spawnReal(name, func, arg, stack_size, priority);
     int status = 0;
 
-    if (debugflag3) {
-        console("spawn(): spawn pid: %d\n", pid);
-    }
+    if (debug3)
+        console("spawn(): spawnd pid %d\n", pid);
 
-    // terminates self if zapped
-    if (is_zapped()) {
-        terminate_real(1);
-    } else {
-        init_user_mode();
-    }
+    // terminate self if zapped
+    if (is_zapped())
+        terminateReal(1);
 
-    args_ptr->arg1 = (void *)(pid);
-    args_ptr->arg4 = (void *)(status);
+    // switch to user mode
+      setUserMode();
 
+    // swtich back to kernel mode and put values for Spawn
+    args->arg1 = (void *) ((long)pid);
+    args->arg4 = (void *) ((long)status);
 }
 
-int spawn_real(char *name, int (*func)(char *), char *arg, int stack_size, int priority) {
-    check_kernel_mode("spawn_real()");
+int spawnReal(char *name, int (*func)(char *), char *arg, int stack_size, int priority)
+{
+    check_kernel_mode("spawnReal");
 
-    if (debugflag3) {
-        console("spawn_real(): forking process %s...\n", name);
-    }
+    if (debug3)
+        console("spawnReal(): forking process %s... \n", name);
 
-    // fork process and get pid
-    int pid = fork1(name, spawn_launch, arg, stack_size, priority);
+    // fork the process and get its pid
+    int pid = fork1(name, spawnLaunch, arg, stack_size, priority);
 
-    if (debugflag3) {
-        console("spawn_real(): forked process name: %s, pid: %d\n", name, pid);
-    }
+    if (debug3)
+        console("spawnReal(): forked process name = %s, pid = %d\n", name, pid);
 
-    // return -1 if forked failed
-    if (pid < 0) {
+    // return -1 if fork failed
+    if (pid < 0)
         return -1;
-    }
 
-    // pid obtained, now we can get child table entry
-    proc_ptr3 child = &ProcTable3[pid % MAXPROC];
-    enqueue3(&ProcTable3[getpid() % MAXPROC].children_queue, child); // add to children queue
+    // now we have the pid, we can get the child table entry
+    procPtr3 child = &ProcTable3[pid % MAXPROC];
+    enq3(&ProcTable3[getpid() % MAXPROC].childrenQueue, child); // add to children queue
 
-    // if spawn_launch hasn't set up proc table entry
+    // if spawnLaunch hasn't done it yet, set up proc table entry
     if (child->pid < 0) {
-        if (debugflag3) {
-            console("spawn_real(): initializing proc table entry for pid %d\n", pid);
-        }
-        init_proc3(pid);
+        if (debug3)
+            console("spawnReal(): initializing proc table entry for pid %d\n", pid);
+        initProc(pid);
     }
+    
+    child->startFunc = func; // give proc its starting function
+    child->parentPtr = &ProcTable3[getpid() % MAXPROC]; // set child's parent pointer
 
-    child->start_func = func; // give proc starting function
-    child->parent_ptr = &ProcTable3[getpid() % MAXPROC]; // set child parent pointer
+    // unblock the process so spawnLaunch can start it
+    MboxCondSend(child->mboxID, 0, 0);
 
-    // unblock process so spawn_launch can start it
-    MboxCondSend(child->mbox_id, 0, 0);
     return pid;
 }
 
-int spawn_launch(char *start_arg){
-    check_kernel_mode("spawn_launch()");
 
-    if (debugflag3) {
-        console("spawn_launch(): launched pid = %d\n", getpid());
-    }
+// Will launch usermode processes and terminate it.
+int spawnLaunch(char *startArg) {
+    check_kernel_mode("spawnLaunch");
+
+    if (debug3)
+        console("spawnLaunch(): launched pid = %d\n", getpid());
 
     // terminate self if zapped
-    if (is_zapped()){
-        terminate_real(1);
-    }
+    if (is_zapped())
+        terminateReal(1);
 
-    // get proc info
-    proc_ptr3 proc = &ProcTable3[getpid() % MAXPROC];
+    // get the proc info
+    procPtr3 proc = &ProcTable3[getpid() % MAXPROC];
 
-    // set up proc table entry if spawn_real has not
+    // if spawnReal hasn't done it yet, set up proc table entry
     if (proc->pid < 0) {
-        if (debugflag3) {
-            console("spawn_launch(): initializing proc table entry for pid %d\n", getpid());
-        }
-        init_proc3(getpid());
-        MboxReceive(proc->mbox_id, 0, 0);
+        if (debug3)
+            console("spawnLaunch(): initializing proc table entry for pid %d\n", getpid());
+        initProc(getpid());
+
+        // block until spawnReal is done
+        MboxReceive(proc->mboxID, 0, 0);
     }
 
     // switch to user mode
-    init_user_mode();
+    setUserMode();
 
-    if (debugflag3) {
-        console("spawn_launch(): staritng process %d...\n", proc->pid);
-    }
+    if (debug3)
+        console("spawnLaunch(): starting process %d...\n", proc->pid);
 
-    // call function to start process
-    int status = proc->start_func(start_arg);
+    // call the function to start the process
+    int status = proc->startFunc(startArg);
 
-    if (debugflag3) {
-        console("spawn_launch(): terminating process %d with status %d\n", proc->pid, status);
-    }
-    Terminate(status); // terminate process if it hasn't terminated itself
+    if (debug3)
+        console("spawnLaunch(): terminating process %d with status %d\n", proc->pid, status);
+
+    Terminate(status); // terminate the process if it hasn't terminated itself
     return 0;
 }
 
-void wait(sysargs *args_ptr) {
-    check_kernel_mode("wait()");
 
-    int *status = args_ptr->arg2;
-    int pid = wait_real(status);
+// Waits for the child process to terminate.
+void wait(sysargs *args)
+{
+    check_kernel_mode("wait");
 
-    if (debugflag3) {
-        console("wait(): joined with child pid: %d, stauts: %d\n", pid, *status);
+    int *status = args->arg2;
+    int pid = waitReal(status);
+
+    if (debug3) {
+        console("wait(): joined with child pid = %d, status = %d\n", pid, *status);
     }
 
-    args_ptr->arg1 = (void *) ((long) pid);
-    args_ptr->arg2 = (void *) ((long) *status);
-    args_ptr->arg4 = (void *) ((long) 0);
+    args->arg1 = (void *) ((long) pid);
+    args->arg2 = (void *) ((long) *status);
+    args->arg4 = (void *) ((long) 0);
 
-    // terminate self if zapped, else switch to user mode
-    if (is_zapped()) {
-        terminate_real(1);
-    } else {
-        init_user_mode();
-    }
+    // terminate self if zapped
+    if (is_zapped())
+        terminateReal(1);
+
+    // switch back to user mode
+    setUserMode();
 }
 
-int wait_real(int *status) {
-    check_kernel_mode("wait_real()");
+int waitReal(int *status)
+{
+    check_kernel_mode("waitReal");
 
-    if (debugflag3) {
-        console("wait_real(): reached wait_real\n");
-        int pid = join(status);
-        return pid;
-    }
+    if (debug3)
+        console("in waitReal\n");
+    int pid = join(status);
+    return pid;
 }
 
-void terminate(sysargs *args_ptr) {
-    check_kernel_mode("terminate()");
 
-    int status = (int) ((long) args_ptr->arg1);
-    terminate_real(status);
+// Terminates the process
+void terminate(sysargs *args)
+{
+    check_kernel_mode("terminate");
 
-    // switch to user mode
-    init_user_mode();
+    int status = (int)((long)args->arg1);
+    terminateReal(status);
+    // switch back to user mode
+    setUserMode();
 }
 
-void terminate_real(int status) {
-    check_kernel_mode("terminate_real()");
+void terminateReal(int status)
+{
+    check_kernel_mode("terminateReal");
 
-    if (debugflag3) {
-        console("terminate_real(): terminated pid: %d, stauts: %d\n", getpid(), status);
-    }
+    if (debug3)
+        console("terminateReal(): terminating pid %d, status = %d\n", getpid(), status);
 
     // zap all children
-    proc_ptr3 proc = &ProcTable3[getpid() % MAXPROC];
-    while (proc->children_queue.size > 0) {
-        proc_ptr3 child = dequeue3(&proc->children_queue);
+    procPtr3 proc = &ProcTable3[getpid() % MAXPROC];
+    while (proc->childrenQueue.size > 0) {
+        procPtr3 child = deq3(&proc->childrenQueue);
         zap(child->pid);
     }
-
-    // remove self from parent list of children
-    remove_child3(&(proc->parent_ptr->children_queue), proc);
+    // remove self from parent's list of children
+    removeChild3(&(proc->parentPtr->childrenQueue), proc);
     quit(status);
 }
 
-void sem_create(sysargs *args_ptr) {
-    check_kernel_mode("sem_create()");
 
-    int value = (long) args_ptr->arg1;
+// Creates a semaphore
+void semCreate(sysargs *args)
+{
+    check_kernel_mode("semCreate");
 
-    // if value is < 0 or no available semaphore, fails
-    if (value < 0 || num_sems == MAXSEMS) {
-        args_ptr->arg5 = (void *) (long) -1;
-    } else {
-        num_sems++;
-        int handle = sem_create_real(value);
-        args_ptr->arg1 = (void *) (long) handle;
-        args_ptr->arg4 = 0;
+    int value = (long) args->arg1;
+
+    // fails if value is negative or no sems avaliable
+    if (value < 0 || numSems == MAXSEMS) {
+        args->arg4 = (void*) (long) -1;
+    }
+    else {
+        numSems++;
+        int handle = semCreateReal(value);
+        args->arg1 = (void*) (long) handle;
+        args->arg4 = 0;
     }
 
-    // terminates self if zapped
     if (is_zapped()) {
-        terminate_real(0);
-    } else {
-        init_user_mode();
+        terminateReal(0);
+    }
+    else {
+        setUserMode();
     }
 }
 
-int sem_create_real(int value) {
-    check_kernel_mode("sem_create_real()");
+int semCreateReal(int value) {
+    check_kernel_mode("semCreateReal");
 
     int i;
-    int priv_mbox_id = MboxCreate(value, 0);
-    int mutex_mbox_id = MboxCreate(1, 0);
+    int priv_mBoxID = MboxCreate(value, 0);
+    int mutex_mBoxID = MboxCreate(1, 0);
 
-    MboxSend(mutex_mbox_id, NULL, 0);
+    MboxSend(mutex_mBoxID, NULL, 0);
 
     for (i = 0; i < MAXSEMS; i++) {
         if (SemTable[i].id == -1) {
             SemTable[i].id = i;
             SemTable[i].value = value;
-            SemTable[i].starting_value = value;
-            SemTable[i].priv_mbox_id = priv_mbox_id;
-            SemTable[i].mutex_mbox_id = mutex_mbox_id;
-            init_proc_queue3(&SemTable[i].blocked_proc, BLOCKED);
+            SemTable[i].startingValue = value;
+            SemTable[i].priv_mBoxID = priv_mBoxID;
+            SemTable[i].mutex_mBoxID = mutex_mBoxID;
+            initProcQueue3(&SemTable[i].blockedProcs, BLOCKED);
             break;
         }
     }
-    for (i = 0; i < value; i++) {
-        MboxSend(priv_mbox_id, NULL, 0);
+
+    int j;
+    for (j = 0; j < value; j++) {
+        MboxSend(priv_mBoxID, NULL, 0);
     }
 
-    MboxReceive(mutex_mbox_id, NULL, 0);
+    MboxReceive(mutex_mBoxID, NULL, 0);
+
     return SemTable[i].id;
 }
 
-void semp(sysargs *args_ptr) {
-    check_kernel_mode("semp()");
 
-    int handle = (long) args_ptr->arg1;
+// Contains arguments through sysargs
+void semP(sysargs *args)
+{
+    check_kernel_mode("semP");
 
-    if (handle < 0) {
-        args_ptr->arg4 = (void *) (long) -1;
-    } else {
-        args_ptr->arg4 = 0;
-        semp_real(handle);
+    int handle = (long) args->arg1;
+
+    if (handle < 0)
+        args->arg4 = (void*) (long) -1;
+    else {
+        args->arg4 = 0;
+        semPReal(handle);
     }
 
-    // terminate self if zapped, else switch to user mode
     if (is_zapped()) {
-        terminate_real(0);
-    } else {
-        init_user_mode();
+        terminateReal(0);
+    }
+    else {
+        setUserMode();
     }
 }
 
-void semp_real(int handle) {
-    check_kernel_mode("semp_real()");
+void semPReal(int handle) {
+    check_kernel_mode("semPReal");
 
-    // get mutex on current semaphore
-    MboxSend(SemTable[handle].mutex_mbox_id, NULL, 0);
+    // get mutex on this semaphore
+    MboxSend(SemTable[handle].mutex_mBoxID, NULL, 0);
 
-    // block if value 0
+    // block if value is 0
     if (SemTable[handle].value == 0) {
-        enqueue3(&SemTable[handle].blocked_proc, &ProcTable3[getpid() % MAXPROC]);
-        MboxReceive(SemTable[handle].priv_mbox_id, NULL, 0);
+        enq3(&SemTable[handle].blockedProcs, &ProcTable3[getpid()%MAXPROC]);
+        MboxReceive(SemTable[handle].mutex_mBoxID, NULL, 0);
 
-        int result = MboxReceive(SemTable[handle].priv_mbox_id, NULL, 0);
+        int result = MboxReceive(SemTable[handle].priv_mBoxID, NULL, 0);
 
-        // terminate if semaphore freed while blocked
-        if (SemTable[handle].id < 0) {
-            terminate_real(1);
+        // terminate if the semaphore freed while we were blocked
+        if (SemTable[handle].id < 0)
+            terminateReal(1);
 
-            // get mutex when unblocked
-            MboxSend(SemTable[handle].mutex_mbox_id, NULL, 0);
-            if (result < 0) {
-                console("semp_real(): bad receive");
-            }
-        }
+        // get mutex again when we unblock
+        MboxSend(SemTable[handle].mutex_mBoxID, NULL, 0);
 
-    } else {
-        SemTable[handle].value -= 1;
-        int result = MboxReceive(SemTable[handle].priv_mbox_id, NULL, 0);
         if (result < 0) {
-            console("semp_real(): bad receive");
+            console("semP(): bad receive");
         }
-        MboxSend(SemTable[handle].mutex_mbox_id, NULL, 0);
     }
 
+    else {
+        SemTable[handle].value -= 1 ;
+
+        int result = MboxReceive(SemTable[handle].priv_mBoxID, NULL, 0);
+        if (result < 0) {
+            console("semP(): bad receive");
+        }
+    }
+
+
+    MboxReceive(SemTable[handle].mutex_mBoxID, NULL, 0);
 }
 
-void semv(sysargs *args_ptr) {
-    check_kernel_mode("semv()");
 
-    int handle = (long) args_ptr->arg1;
 
-    if (handle < 0) {
-        args_ptr->arg4 = (void*) (long) -1;
-    } else {
-        args_ptr->arg4 = 0;
-    }
+// Contains arguments
+void semV(sysargs *args)
+{
+    check_kernel_mode("semV");
 
-    semv_real(handle);
+    int handle = (long) args->arg1;
 
-    // terminate self if zapped, else switch to user mode
+    if (handle < 0)
+        args->arg4 = (void*) (long) -1;
+    else
+        args->arg4 = 0;
+
+    semVReal(handle);
+
     if (is_zapped()) {
-        terminate_real(0);
-    } else {
-        init_user_mode();
+        terminateReal(0);
+    }
+    else {
+        setUserMode();
     }
 }
 
-void semv_real(int handle) {
-    check_kernel_mode("semv_real()");
+void semVReal(int handle) {
+    check_kernel_mode("semVReal");
 
-    MboxSend(SemTable[handle].mutex_mbox_id, NULL, 0);
+    MboxSend(SemTable[handle].mutex_mBoxID, NULL, 0);
 
-    // unblock proc
-    if (SemTable[handle].blocked_proc.size > 0) {
-        dequeue3(&SemTable[handle].blocked_proc);
+    // unblock blocked proc
+    if (SemTable[handle].blockedProcs.size > 0) {
+        deq3(&SemTable[handle].blockedProcs);
 
-        // receive on mutex so semp can send after receive receive on priv_mbox
-        MboxReceive(SemTable[handle].mutex_mbox_id, NULL, 0);
+        MboxReceive(SemTable[handle].mutex_mBoxID, NULL, 0); // need to receive on mutex so semP can send right after receiving on privmbox
 
-        MboxSend(SemTable[handle].priv_mbox_id, NULL, 0);
-        MboxSend(SemTable[handle].mutex_mbox_id, NULL, 0);
-    } else {
-        SemTable[handle].value += 1;
+        MboxSend(SemTable[handle].priv_mBoxID, NULL, 0);
+
+        MboxSend(SemTable[handle].mutex_mBoxID, NULL, 0);
+    }
+    else {
+        SemTable[handle].value += 1 ;
     }
 
-    MboxReceive(SemTable[handle].mutex_mbox_id, NULL, 0);
+    MboxReceive(SemTable[handle].mutex_mBoxID, NULL, 0);
 }
 
-void sem_free(sysargs *args_ptr) {
-    check_kernel_mode("sem_free()");
 
-    int handle = (long) args_ptr->arg1;
+// Free arguments
+void semFree(sysargs *args)
+{
+   check_kernel_mode("semFree");
 
-    if (handle < 0) {
-        args_ptr->arg4 = (void*) (long) -1;
-    } else {
-        args_ptr->arg4 = 0;
-        int value = sem_free_real(handle);
-        args_ptr->arg4 = (void*)(long) value;
+    int handle = (long) args->arg1;
+
+    if (handle < 0)
+        args->arg4 = (void*) (long) -1;
+    else {
+        args->arg4 = 0;
+        int value = semFreeReal(handle);
+        args->arg4 = (void*) (long) value;
     }
 
-    // terminate self if zapped, else switch to user mode
     if (is_zapped()) {
-        terminate_real(0);
-    } else {
-        init_user_mode();
+        terminateReal(0);
+    }
+    else {
+        setUserMode();
     }
 }
 
-int sem_free_real(int handle) {
-    check_kernel_mode("sem_free_real()");
+int semFreeReal(int handle) {
+    check_kernel_mode("semFreeReal");
 
-    int mutex_id = SemTable[handle].mutex_mbox_id;
-    MboxSend(mutex_id, NULL, 0);
+    int mutexID = SemTable[handle].mutex_mBoxID;
+    MboxSend(mutexID, NULL, 0);
 
-    int priv_id = SemTable[handle].priv_mbox_id;
+    int privID = SemTable[handle].priv_mBoxID;
 
     SemTable[handle].id = -1;
     SemTable[handle].value = -1;
-    SemTable[handle].starting_value = -1;
-    SemTable[handle].priv_mbox_id = -1;
-    SemTable[handle].mutex_mbox_id = -1;
-    num_sems--;
+    SemTable[handle].startingValue = -1;
+    SemTable[handle].priv_mBoxID = -1;
+    SemTable[handle].mutex_mBoxID = -1;
+    numSems--;
 
-    // terminate processes waiting on current semaphore
-    if (SemTable[handle].blocked_proc.size > 0) {
-        while (SemTable[handle].blocked_proc.size > 0) {
-            dequeue3(&SemTable[handle].blocked_proc);
-            int result = MboxSend(priv_id, NULL, 0);
+    // terminate procs waiting on this semphore
+    if (SemTable[handle].blockedProcs.size > 0) {
+        while (SemTable[handle].blockedProcs.size > 0) {
+            deq3(&SemTable[handle].blockedProcs);
+            int result = MboxSend(privID, NULL, 0);
             if (result < 0) {
-                console("sem_free_real(): error on send!");
+                console("semFreeReal(): send error");
             }
         }
-        MboxReceive(mutex_id, NULL, 0);
-        return -1;
-    } else {
-        MboxReceive(mutex_id, NULL, 0);
+        MboxReceive(mutexID, NULL, 0);
+        return 1;
+    }
+
+    else {
+        MboxReceive(mutexID, NULL, 0);
         return 0;
     }
 }
 
-void gettimeofday(sysargs *args_ptr) {
-    check_kernel_mode("gettimeofday()");
-    *((int*)(args_ptr->arg1)) = sys_clock();
+
+// Gets time of day
+void getTimeOfDay(sysargs *args)
+{
+    check_kernel_mode("getTimeOfDay");
+    *((int *)(args->arg1)) = sys_clock();
 }
 
-void cputime(sysargs *args_ptr) {
-    check_kernel_mode("cputime()");
-    *((int*)(args_ptr->arg1)) = readtime();
+
+// Gets CPU time
+void cpuTime(sysargs *args)
+{
+    check_kernel_mode("cpuTime");
+    *((int *)(args->arg1)) = readtime();
 }
 
-void getPID(sysargs *args_ptr) {
-    check_kernel_mode("getPID()");
 
-    *((int*)(args_ptr->arg1)) = getpid();
-
+// Gets PID
+void getPID(sysargs *args)
+{
+    check_kernel_mode("getPID");
+    *((int *)(args->arg1)) = getpid();
 }
 
-void nullsys3(sysargs *args_ptr) {
-    console("nullsys3(): invalid syscall %d. Terminating...\n", args_ptr->number);
-    terminate_real(1);
+
+/* an error method to handle invalid syscalls */
+void nullsys3(sysargs *args)
+{
+    console("nullsys(): Invalid syscall %d. Terminating...\n", args->number);
+    terminateReal(1);
 }
 
-void init_proc(int pid) {
-    check_kernel_mode("init_proc()");
+
+/* initializes proc struct */
+void initProc(int pid) {
+    check_kernel_mode("initProc()");
 
     int i = pid % MAXPROC;
 
     ProcTable3[i].pid = pid;
-    ProcTable3[i].mbox_id = MboxCreate(0, 0);
-    ProcTable3[i].start_func = NULL;
-    ProcTable3[i].next_proc_ptr = NULL;
-    init_proc_queue3(&ProcTable3->children_queue, CHILDREN);
+    ProcTable3[i].mboxID = MboxCreate(0, 0);
+    ProcTable3[i].startFunc = NULL;
+    ProcTable3[i].nextProcPtr = NULL;
+    initProcQueue3(&ProcTable3[i].childrenQueue, CHILDREN);
 }
 
-void empty_proc3(int pid) {
-    check_kernel_mode("empty_proc3()");
+
+/* empties proc struct */
+void emptyProc3(int pid) {
+    check_kernel_mode("emptyProc()");
 
     int i = pid % MAXPROC;
 
-    ProcTable3[i].pid = pid;
-    ProcTable3[i].mbox_id = -1;
-    ProcTable3[i].start_func = NULL;
-    ProcTable3[i].next_proc_ptr = NULL;
+    ProcTable3[i].pid = -1;
+    ProcTable3[i].mboxID = -1;
+    ProcTable3[i].startFunc = NULL;
+    ProcTable3[i].nextProcPtr = NULL;
 }
 
-//Function to check in kernel mode.
-void check_kernel_mode(char *name) {
-    if ((PSR_CURRENT_MODE & psr_get()) == 0) {
-        console("%s: called while in user mode, by process %d. Halting...\n", name, getpid());
+
+// Check in kernel mode. Halt otherwise
+void check_kernel_mode(char *name)
+{
+    if( (PSR_CURRENT_MODE & psr_get()) == 0 ) {
+        console("%s: called while in user mode, by process %d. Halting...\n",
+             name, getpid());
         halt(1);
     }
-} /* checkKernelMode */
-
-// Function to switch to user mode
-void init_user_mode(){
-    psr_set(psr_get() & ~PSR_CURRENT_MODE);
 }
 
-void enqueue3(proc_queue *q, proc_ptr3 p){
-    if (q->head == NULL && q->tail == NULL) {
-        q->head = q->tail = p;
-    } else {
-        if (q->type == BLOCKED) {
-            q->tail->next_proc_ptr = p;
-        } else if (q->type == CHILDREN) {
-            q->tail->next_sibling_ptr = p;
-        }
-        q->tail = p;
-    }
-    q->size++;
+
+// To switch to usermode
+void setUserMode()
+{
+    psr_set( psr_get() & ~PSR_CURRENT_MODE );
 }
 
-proc_ptr3 dequeue3(proc_queue *q) {
-    proc_ptr3 curr = q->head;
-    if (q->head == NULL) {
-        return NULL;
-    }
-    if (q->head == q->tail) {
-        q->head = q-> tail = NULL;
-    } else {
-        if (q->type == BLOCKED) {
-            q->head = q->head->next_proc_ptr;
-        } else if (q->type == CHILDREN) {
-            q->head = q->head->next_sibling_ptr;
-        }
-    }
-    q->size--;
-    return curr;
+
+/* ------------------------------------------------------------------------
+  Below are functions that manipulate ProcQueue:
+    initProcQueue, enq, deq, removeChild and peek.
+   ----------------------------------------------------------------------- */
+
+/* Initialize the given procQueue */
+void initProcQueue3(procQueue* q, int type) {
+  q->head = NULL;
+  q->tail = NULL;
+  q->size = 0;
+  q->type = type;
 }
 
-void remove_child3(proc_queue *q, proc_ptr3 child) {
-    if (q->head == NULL || q->type != CHILDREN) {
-        return;
-    }
-
-    if (q->head == child) {
-        dequeue3(q);
-        return;
-    }
-
-    proc_ptr3 prev = q->head;
-    proc_ptr3 p = q->head->next_sibling_ptr;
-
-    while (p != NULL) {
-        if (p == child) {
-            if (p == q->tail) {
-                q->tail = prev;
-            } else {
-                prev->next_sibling_ptr = p->next_sibling_ptr->next_sibling_ptr;
-            }
-            q->size--;
-        }
-        prev = p;
-        p = p->next_sibling_ptr;
-    }
+/* Add the given procPtr3 to the back of the given queue. */
+void enq3(procQueue* q, procPtr3 p) {
+  if (q->head == NULL && q->tail == NULL) {
+    q->head = q->tail = p;
+  } else {
+    if (q->type == BLOCKED)
+      q->tail->nextProcPtr = p;
+    else if (q->type == CHILDREN)
+      q->tail->nextSiblingPtr = p;
+    q->tail = p;
+  }
+  q->size++;
 }
 
-proc_ptr3 peek3(proc_queue *q) {
-    if (q->head == NULL) {
-        return NULL;
+/* Remove and return the head of the given queue. */
+procPtr3 deq3(procQueue* q) {
+  procPtr3 temp = q->head;
+  if (q->head == NULL) {
+    return NULL;
+  }
+  if (q->head == q->tail) {
+    q->head = q->tail = NULL;
+  }
+  else {
+    if (q->type == BLOCKED)
+      q->head = q->head->nextProcPtr;
+    else if (q->type == CHILDREN)
+      q->head = q->head->nextSiblingPtr;
+  }
+  q->size--;
+  return temp;
+}
+
+/* Remove the child process from the queue */
+void removeChild3(procQueue* q, procPtr3 child) {
+  if (q->head == NULL || q->type != CHILDREN)
+    return;
+
+  if (q->head == child) {
+    deq3(q);
+    return;
+  }
+
+  procPtr3 prev = q->head;
+  procPtr3 p = q->head->nextSiblingPtr;
+
+  while (p != NULL) {
+    if (p == child) {
+      if (p == q->tail)
+        q->tail = prev;
+      else
+        prev->nextSiblingPtr = p->nextSiblingPtr->nextSiblingPtr;
+      q->size--;
     }
-    return q->head;
+    prev = p;
+    p = p->nextSiblingPtr;
+  }
+}
+
+/* Return the head of the given queue. */
+procPtr3 peek3(procQueue* q) {
+  if (q->head == NULL) {
+    return NULL;
+  }
+  return q->head;
 }
