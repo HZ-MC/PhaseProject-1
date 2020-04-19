@@ -1,5 +1,6 @@
 #!/bin/bash
 # test case script
+# place in phase3 directory
 # to run script, open terminal and type chmod 755 test_case_script.txt
 # next, type ./test_case_script.txt
 
