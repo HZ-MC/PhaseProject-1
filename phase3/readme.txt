@@ -1,4 +1,4 @@
-Members: Javier Felix, Mark Festejo Hassan Martinez
+Members: Javier Felix, Mark Festejo, Hassan Martinez
 
 System used to develop phase 3: Mac OS and UbuntuOS 
 
