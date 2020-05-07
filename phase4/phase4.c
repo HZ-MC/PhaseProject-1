@@ -377,9 +377,9 @@ DiskDriver(char *arg) {
                 }
             }
 
-            if (debug4)
+            if (debug4) {
                 console("DiskDriver: finished request from pid %d\n", proc->pid, result, status);
-
+            }
             remove_disk_queue(&disk_queues[unit]); // remove proc from queue
             semv_real(proc->block_sem); // unblock caller
         }
@@ -445,7 +445,7 @@ TermReader(char *arg) {
 
     semv_real(running);
     while (!is_zapped()) {
-        // receieve characters
+        // receive characters
         MboxReceive(char_recv_mbox[unit], &receive, sizeof(int));
         char ch = TERM_STAT_CHAR(receive);
         line[next] = ch;
@@ -519,8 +519,9 @@ TermWriter(char *arg) {
 
         // enable receive interrupt
         ctrl = 0;
-        if (term_int[unit] == 1)
+        if (term_int[unit] == 1) {
             ctrl = TERM_CTRL_RECV_INT(ctrl);
+        }
         device_output(TERM_DEV, unit, (void *) ((long) ctrl));
         term_int[unit] = 0;
         int pid;

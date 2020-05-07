@@ -8,6 +8,7 @@
 
 #include <phase1.h>
 #include <phase2.h>
+#include <phase3.h>
 #include <libuser.h>
 #include <usyscall.h>
 #include <usloss.h>
@@ -48,7 +49,9 @@ int Spawn(char *name, int (*func)(char *), char *arg, int stack_size,
     sa.arg3 = (void *) stack_size;
     sa.arg4 = (void *) priority;
     sa.arg5 = name;
+
     usyscall(&sa);
+
     *pid = (int) sa.arg1;
     return (int) sa.arg4;
 } /* end of Spawn */
@@ -73,7 +76,9 @@ int Wait(int *pid, int *status)
     
     CHECKMODE;
     sa.number = SYS_WAIT;
+
     usyscall(&sa);
+
     *pid = (int) sa.arg1;
     *status = (int) sa.arg2;
     return (int) sa.arg4;
@@ -98,7 +103,8 @@ void Terminate(int status)
     
     CHECKMODE;
     sa.number = SYS_TERMINATE;
-    sa.arg1 = (void *) status;
+    sa.arg1 = (void *) ((long)status);
+
     usyscall(&sa);
     return;
     
@@ -123,7 +129,9 @@ int SemCreate(int value, int *semaphore)
     CHECKMODE;
     sa.number = SYS_SEMCREATE;
     sa.arg1 = (void *) value;
+
     usyscall(&sa);
+
     *semaphore = (int) sa.arg1;
     return (int) sa.arg4;
 } /* end of SemCreate */
@@ -146,7 +154,9 @@ int SemP(int semaphore)
     CHECKMODE;
     sa.number = SYS_SEMP;
     sa.arg1 = (void *) semaphore;
+
     usyscall(&sa);
+
     return (int) sa.arg4;
 } /* end of SemP */
 
@@ -168,7 +178,9 @@ int SemV(int semaphore)
     CHECKMODE;
     sa.number = SYS_SEMV;
     sa.arg1 = (void *) semaphore;
+
     usyscall(&sa);
+
     return (int) sa.arg4;
 } /* end of SemV */
 
@@ -190,8 +202,10 @@ int SemFree(int semaphore)
     CHECKMODE;
     sa.number = SYS_SEMFREE;
     sa.arg1 = (void *) semaphore;
+
     usyscall(&sa);
     return (int) sa.arg4;
+
 } /* end of SemFree */
 
 
@@ -210,9 +224,10 @@ void GetTimeofDay(int *tod)
     
     CHECKMODE;
     sa.number = SYS_GETTIMEOFDAY;
+
     usyscall(&sa);
+
     *tod = (int) sa.arg1;
-    return;
 } /* end of GetTimeofDay */
 
 
@@ -232,9 +247,10 @@ void CPUTime(int *cpu)
 
     CHECKMODE;
     sa.number = SYS_CPUTIME;
+
     usyscall(&sa);
+
     *cpu = (int) sa.arg1;
-    return;
 } /* end of CPUTime */
 
 
@@ -254,9 +270,10 @@ void GetPID(int *pid)
 
     CHECKMODE;
     sa.number = SYS_GETPID;
+
     usyscall(&sa);
+
     *pid = (int) sa.arg1;
-    return;
 } /* end of GetPID */
 
 
@@ -380,4 +397,52 @@ int DiskSize(int unit, int *sector, int *track, int *disk)
     return (int) sa.arg4;
 } /* end of DiskSize */
 
+
+/*
+ *  Routine:
+ *
+ *  Description:
+ *
+ *  Arguments:
+ *
+ *  Return Value: 
+ *
+ */
+int TermRead (char *buff, int bsize, int unit_id, int *nread) {
+    sysargs sa;
+    CHECKMODE;
+    sa.number = SYS_TERMREAD;
+    sa.arg1 = buff;
+    sa.arg2 = (void *) ((long) bsize);
+    sa.arg3 = (void *) ((long) unit_id);
+
+    usyscall(&sa);
+
+    *nread = (long) sa.arg2;
+    return (long) sa.arg4;
+}
+
+/*
+ *  Routine:
+ *
+ *  Description:
+ *
+ *  Arguments:
+ *
+ *  Return Value: 
+ *
+ */
+int TermWrite(char *buff, int bsize, int unit_id, int *nwrite) {
+    sysargs sa;
+    CHECKMODE;
+    sa.number = SYS_TERMWRITE;
+    sa.arg1 = buff;
+    sa.arg2 = (void *) ((long) bsize);
+    sa.arg3 = (void *) ((long) unit_id);
+
+    usyscall(&sa);
+
+    *nwrite = (long) sa.arg2;
+    return (long) sa.arg4;
+}
 /* end libuser.c */
